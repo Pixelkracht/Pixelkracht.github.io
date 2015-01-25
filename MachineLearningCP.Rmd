@@ -1,0 +1,86 @@
+---
+title: "Practical Machine Learning - Course Project"
+date: "Sunday, January 25, 2015"
+output: html_document
+---
+
+# Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify _how well_ they do it. In this document, we will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+These data were collected by the Human Activity Recognition project (HAR) and you can read more about the dataset here:
+
+[Qualitative Activity Recognition of Weight Lifting Exercises](http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201)
+
+and here:
+http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises
+
+Our goal is to predict - through machine learning - the manner in which the participants did the exercise. This is the "classe" variable in the training set.  
+
+# Loading the data
+
+```{r}
+#download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "pml-training.csv")
+fulltrain <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+dateDownloaded <- date()
+dateDownloaded
+```
+
+# Some exploration of the training data
+
+Results have been omitted from the output for brevity's sake.
+
+```{r results='hide'}
+print(dim(fulltrain))
+print(names(fulltrain))
+print(class(fulltrain$classe))
+print(levels(fulltrain$classe))
+print(length(fulltrain[complete.cases(fulltrain),])) # 160 complete observations 
+```
+
+# Creating a training model
+
+There are only 160 observations where none of the values are missing. All the other observations have NAs in them, which will cause the train function to fail. I will therefore remove the columns that have lots of NAs.
+
+```{r cache=TRUE}
+library(caret)
+set.seed(17)
+# First, some cleaning. I don't think we need these variables.
+fulltrain["X"] <- NULL
+fulltrain["user_name"] <- NULL
+fulltrain["raw_timestamp_part_1"] <- NULL
+fulltrain["raw_timestamp_part_2"] <- NULL
+fulltrain["cvtd_timestamp"] <- NULL
+# Remove columns that have lots (= more than half) of NAs
+thintrain <- data.frame(1:nrow(fulltrain))
+cols <- ncol(fulltrain)
+for(i in 1:cols) {
+        col <- fulltrain[i]
+        empty <- (is.na(col))
+        if (length(col[empty]) < 9810) {
+                thintrain <- cbind(thintrain, col)
+        }
+}
+# Remove cols automatically added by cbind
+thintrain <- thintrain[,-1]; 
+
+tc <- trainControl(method = "cv", number = 3, repeats = 1, p = 0.6)
+# This may take a while... 
+mod <- train(classe ~ ., data = thintrain, method = "rf", trControl = tc)
+```
+
+# Cross-validation
+
+By setting the number in the trainControl function above to 3, we have caused a 3-fold cross-validation. We will now have a look at the estimated errors.
+
+```{r}
+confusionMatrix(mod$finalModel$predicted, thintrain$classe)
+```
+
+We can see that the prediction model failed in twentysix cases. This gives us an error rate of 
+
+```{r}
+26/19622
+```
+
+which corresponds to an accuracy of 0.9987, as listed in the confusion matrix above. We can consider the in sample error rate as an estimate for the out of sample error rate.
