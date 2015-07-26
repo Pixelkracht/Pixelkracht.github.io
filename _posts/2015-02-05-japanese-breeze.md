@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Japanese Breeze"
+title: "Hier staat de titel"
 date: 2015-02-05
 backgrounds:
     - https://dl.dropboxusercontent.com/u/18322837/cdn/Streetwill/tube.jpg
